@@ -1,0 +1,11 @@
+{
+  project:
+    {
+      creation-date: "2026-02-10",
+      description: "A GHC plugin to ensure package-qualified imports are used.",
+      name: "require-package-imports",
+      repo: "sellout/require-package-imports",
+      summary: "Require package-qualified imports",
+    },
+  type: { name: "haskell" },
+}
