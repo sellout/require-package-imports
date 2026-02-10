@@ -1,0 +1,14 @@
+[forAnyModule]
+maximumExportsPlusHeaderUndocumented = 0
+maximumExportsWithoutSince = 0
+moduleHeaderCopyrightMustExistNonEmpty = true
+## We want to require a description, but just a “normal” description, not the
+## header field.
+moduleHeaderDescriptionMustExistNonEmpty = false
+moduleHeaderLicenseMustExistNonEmpty = true
+allowedAliasUniqueness.allAliasesUniqueExcept = []
+
+## Would like to enforce this for _all_ imports, but that doesn’t currently seem
+## possible.
+[[forAnyModule.allowedQualifications.importScheme]]
+safe = true

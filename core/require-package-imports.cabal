@@ -148,10 +148,12 @@ common defaults
   build-depends:
     base ^>= {4.8.2, 4.9.0, 4.10.0, 4.11.0, 4.12.0, 4.13.0, 4.14.0, 4.15.0, 4.16.0, 4.17.0, 4.18.0, 4.19.0, 4.20.0, 4.21.0, 4.22.0},
     ghc-compat-plugin ^>= {0.1.0},
+    henforcer ^>= {1.0.0},
   ghc-options:
     -fplugin GhcCompat
     -fplugin-opt GhcCompat:minVersion=7.10.1
     -fplugin-opt GhcCompat:reportIncompatibleExtensions=error
+    -fplugin Henforcer
   if impl(ghc >= 8.0.1)
     ghc-options:
       -Weverything
@@ -227,6 +229,10 @@ test-suite doctests
   build-depends:
     doctest,
     require-package-imports,
+  ghc-options:
+    -- Don’t run Henforcer on this target, even when linting, because it has
+    -- modules we don’t control.
+    -fplugin-opt Henforcer:--config=henforcer-empty.toml
   if impl(ghc >= 8.10.1)
     ghc-options:
       -- `doctest` requires the package containing the doctests as a dependency
