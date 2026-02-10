@@ -27,7 +27,7 @@ where
 import safe "base" Control.Applicative (pure)
 import safe "base" Control.Category ((.))
 import safe "base" Data.Foldable (foldr)
-import safe "base" Data.Function (const, flip, ($))
+import safe "base" Data.Function (flip, ($))
 import safe "base" Data.Functor (fmap)
 import safe "base" Data.Maybe (Maybe (Nothing))
 import safe "base" Data.String (String, fromString)
@@ -40,6 +40,7 @@ import "ghc" GHC.Plugins (Plugin, defaultPlugin)
 import qualified "ghc" GHC.Plugins as Plugins
 import qualified "ghc" GHC.Types.Error as Error
 import qualified "ghc" GHC.Types.SourceText as SourceText
+import qualified "ghc" GHC.Utils.Error
 import qualified "ghc" Language.Haskell.Syntax as Syntax
 import safe qualified "ghc-boot-th" GHC.LanguageExtensions.Type as Extension
 
@@ -47,32 +48,31 @@ mkStringLit :: String -> SourceText.StringLiteral
 mkStringLit =
   flip (SourceText.StringLiteral SourceText.NoSourceText) Nothing . fromString
 
+#if MIN_VERSION_ghc(9, 8, 1)
+mkUnknownDiagnostic :: Error.DiagnosticMessage -> Error.UnknownDiagnostic opts
+mkUnknownDiagnostic = Error.UnknownDiagnostic (\_ -> Error.defaultOpts)
+#else
+mkUnknownDiagnostic :: Error.DiagnosticMessage -> Error.UnknownDiagnostic
+mkUnknownDiagnostic = Error.UnknownDiagnostic
+#endif
+
 reportNoPkgQual ::
   Syntax.LImportDecl HsExt.GhcPs -> Maybe (Error.MsgEnvelope Errors.GhcMessage)
 reportNoPkgQual imp = case Syntax.ideclPkgQual $ Plugins.unLoc imp of
   Plugins.NoRawPkgQual ->
-    -- FIXME: Why do I need to use this twice?
-    let reason = Error.WarningWithoutFlag
-     in pure
-          Error.MsgEnvelope
-            { Error.errMsgSpan = Annotation.getLocA imp,
-              Error.errMsgContext = Plugins.alwaysQualify,
-              Error.errMsgDiagnostic =
-                Errors.GhcUnknownMessage
-                  . Error.UnknownDiagnostic (const Error.defaultOpts)
-                  . Error.mkPlainDiagnostic
-                    reason
-                    [ Error.UnknownHint
-                        (Plugins.unLoc imp)
-                          { Syntax.ideclPkgQual =
-                              Plugins.RawPkgQual $ mkStringLit "<package name>"
-                          }
-                    ]
-                  $ fromString "Missing package-qualified import. (Required due to use of ‘-fplugin RequirePackageImports’)",
-              -- TODO: Make severity configurable.
-              Error.errMsgSeverity = Error.SevError,
-              Error.errMsgReason = Error.ResolvedDiagnosticReason reason
-            }
+    pure
+      . GHC.Utils.Error.mkPlainErrorMsgEnvelope (Annotation.getLocA imp)
+      . Errors.GhcUnknownMessage
+      . mkUnknownDiagnostic
+      . Error.mkPlainDiagnostic
+        Error.WarningWithoutFlag
+        [ Error.UnknownHint
+            (Plugins.unLoc imp)
+              { Syntax.ideclPkgQual =
+                  Plugins.RawPkgQual $ mkStringLit "<package name>"
+              }
+        ]
+      $ fromString "Missing package-qualified import. (Required due to use of ‘-fplugin RequirePackageImports’)"
   Plugins.RawPkgQual _ -> Nothing
 
 processImports ::
