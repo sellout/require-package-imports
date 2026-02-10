@@ -55,7 +55,7 @@ reportNoPkgQual imp = case Syntax.ideclPkgQual $ Plugins.unLoc imp of
     let reason = Error.WarningWithoutFlag
      in pure
           Error.MsgEnvelope
-            { Error.errMsgSpan = Annotation.getHasLoc imp,
+            { Error.errMsgSpan = Annotation.getLocA imp,
               Error.errMsgContext = Plugins.alwaysQualify,
               Error.errMsgDiagnostic =
                 Errors.GhcUnknownMessage
