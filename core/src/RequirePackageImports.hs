@@ -5,6 +5,16 @@
 {-# OPTIONS_GHC -Wno-incomplete-record-selectors #-}
 #endif
 
+-- |
+-- Copyright: 2026 Greg Pfeil
+-- License: AGPL-3.0-only WITH Universal-FOSS-exception-1.0 OR LicenseRef-commercial
+--
+-- This plugin ensures that all imports include a package-qualifier.
+--
+-- __TODO__: Add support for whitelisting module names. Sometimes the same
+--           module comes from different packages with different dependency
+--           versions, and it’s easier to drop the qualification requirement in
+--           that case than to add CPP.
 module RequirePackageImports
   ( plugin,
 
@@ -80,11 +90,15 @@ processImports msgs =
   pure . foldr (flip (foldr Error.addMessage) . reportNoPkgQual) msgs
 
 -- | Enables `Extension.PackageImports`, so one can address the plugin’s reports.
+--
+-- @since 0.0.1.0
 dflagsPlugin ::
   [Plugins.CommandLineOption] -> Plugins.DynFlags -> IO Plugins.DynFlags
 dflagsPlugin _ = pure . (`Plugins.xopt_set` Extension.PackageImports)
 
--- | Produce `DIagnostic`s for any imports that are missing package qualifiers.
+-- | Produce `Diagnostic`s for any imports that are missing package qualifiers.
+--
+-- @since 0.0.1.0
 parsedResultAction ::
   [Plugins.CommandLineOption] ->
   Plugins.ModSummary ->
@@ -110,6 +124,10 @@ liftDflagsPlugin dPlugin opts env =
   fmap (\hsc_dflags -> env {Plugins.hsc_dflags}) . dPlugin opts $
     Plugins.hsc_dflags env
 
+-- | The plugin entry point. This is used by passing @-fplugin
+--   RequirePackageImports@ to GHC.
+--
+-- @since 0.0.1.0
 plugin :: Plugin
 plugin =
   defaultPlugin
