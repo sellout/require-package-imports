@@ -73,6 +73,16 @@ custom-setup
     base ^>= {4.8.2, 4.9.0, 4.10.0, 4.11.0, 4.12.0, 4.13.0, 4.14.0, 4.15.0, 4.16.0, 4.17.0, 4.18.0, 4.19.0, 4.20.0, 4.21.0, 4.22.0},
     cabal-doctest ^>= {1.0.0},
 
+flag lint
+  description:
+    Compile with linters enabled. This is intended for developers of this
+    package. By controlling linting with a flag, it keeps the plugins & their
+    dependencies out of the dependency graph, but we need to ensure the plugins
+    hadon’t actually /modify/ anything.
+  default: False
+  -- Because disabling this flag won’t help the solver.
+  manual: True
+
 flag noisy-deprecations
   description:
     Prior to GHC 9.10, the @DEPRECATED@ pragma can’t distinguish between terms
@@ -82,14 +92,6 @@ flag noisy-deprecations
     there’s a name collision and the namespace you’re referencing is the one
     that’s deprecated.
   default: True
-  -- Because disabling this flag won’t help the solver.
-  manual: True
-
-flag verify-no-recursion
-  description:
-    Compile with "NoRecursion" enabled. This is intended for developers of this
-    package.
-  default: False
   -- Because disabling this flag won’t help the solver.
   manual: True
 
@@ -148,12 +150,10 @@ common defaults
   build-depends:
     base ^>= {4.8.2, 4.9.0, 4.10.0, 4.11.0, 4.12.0, 4.13.0, 4.14.0, 4.15.0, 4.16.0, 4.17.0, 4.18.0, 4.19.0, 4.20.0, 4.21.0, 4.22.0},
     ghc-compat-plugin ^>= {0.1.0},
-    henforcer ^>= {1.0.0},
   ghc-options:
     -fplugin GhcCompat
     -fplugin-opt GhcCompat:minVersion=7.10.1
     -fplugin-opt GhcCompat:reportIncompatibleExtensions=error
-    -fplugin Henforcer
   if impl(ghc >= 8.0.1)
     ghc-options:
       -Weverything
@@ -201,14 +201,19 @@ common defaults
     NoPatternGuards
     -- NoStarIsType - uncomment if the oldest supported version is GHC 8.6.1+
     -- NoTypeApplications - uncomment if the oldest supported version is GHC 8.0.1+
-  if flag(noisy-deprecations)
-    cpp-options:
-      -DSELLOUT_NOISY_DEPRECATIONS
-  if flag(verify-no-recursion)
+  if flag(lint)
     build-depends:
       no-recursion,
     ghc-options:
-      -fplugin=NoRecursion
+      -fplugin NoRecursion
+    if impl(ghc >= 9.4.5)
+      build-depends:
+        henforcer ^>= {1.0.0},
+      ghc-options:
+        -fplugin Henforcer
+  if flag(noisy-deprecations)
+    cpp-options:
+      -DSELLOUT_NOISY_DEPRECATIONS
 
 library
   import: defaults

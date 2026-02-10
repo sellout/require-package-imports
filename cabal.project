@@ -6,9 +6,8 @@ minimize-conflict-set: true
 reorder-goals: true
 
 flags:
-  -- Ensure development of this project always uses @NoRecursion@, even if it
-  -- causes the solver to fail.
-  +verify-no-recursion
+  -- Ensure development of this project always runs linters.
+  +lint
 
 program-options
   ghc-options:
