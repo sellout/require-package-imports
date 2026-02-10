@@ -1,14 +1,44 @@
-# require-package-imports
+# `RequirePackageImports` plugin
 
 [![Hackage Version](https://img.shields.io/hackage/v/require-package-imports)](https://hackage.haskell.org/package/require-package-imports)
 [![Packaging status](https://repology.org/badge/tiny-repos/haskell:require-package-imports.svg)](https://repology.org/project/haskell:require-package-imports/versions)
 [![latest packaged versions](https://repology.org/badge/latest-versions/haskell:require-package-imports.svg)](https://repology.org/project/haskell:require-package-imports/versions)
 
-Require package-qualified imports
+Require [package-qualified imports](https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/package_qualified_imports.html)
 
 A GHC plugin to ensure package-qualified imports are used.
 
+## motivation
+
+Package-qualified imports solve a few problems. First, they communicate provenance to a reader. It’s not always obvious where particular modules come from. Second, the eliminate ambiguity – if multiple packages expose the same module name, this makes it clear which one is being used. Third, it improves alignment – for example, [the Extra package](https://hackage.haskell.org/package/extra) could expose `Data.List` and then both can be imported side-by-side[^1].
+
+```haskell
+import "base" Data.List (break)
+import "extra" Data.List (trim, (!?))
+```
+
+[^1]: I _think_ there is a version of GHC before which multiple imports of the same module name doesn’t work, but I don’t recall which version.
+
+Finally, it reduces duplication. Many packages introduce the package name _somewhere_ in the module hierarchy (Extra does it at the end, Megaparsec does it after `Text`[^2], etc). This redundancy is unnecessary, because we already have a tool for this (since GHC 6.10!)
+
+[^2]: Should all of Megaparsec even _be_ under `Text`? I feel like the clumping of its modules is due to that module naming decision.
+
+This pattern is also seen in other programming languages (which you may have varying opinions on):
+
+- Rust’s [`use some_crate::some_mod;` syntax](https://doc.rust-lang.org/std/keyword.use.html)
+- Python’s [import packages](https://docs.python.org/3/reference/import.html#searching)
+
 ## usage
+
+Add the following to your Cabal stanzas, and start getting errors around missing package-qualifiers on your imports.
+
+```cabal
+  build-depends: require-package-imports ^>= 0.1.0
+  ghc-options:
+    -fplugin RequirePackageImports
+```
+
+This also implies the `PackageImports` extension, so it doesn’t need to be enabled explicitly.
 
 ## versioning
 
