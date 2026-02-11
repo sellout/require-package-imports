@@ -48,7 +48,12 @@ mkStringLit :: String -> SourceText.StringLiteral
 mkStringLit =
   flip (SourceText.StringLiteral SourceText.NoSourceText) Nothing . fromString
 
-#if MIN_VERSION_ghc(9, 8, 1)
+#if MIN_VERSION_ghc(9, 14, 1)
+mkUnknownDiagnostic ::
+  Error.DiagnosticMessage -> Error.UnknownDiagnostic opts Error.GhcHint
+mkUnknownDiagnostic =
+  Error.UnknownDiagnostic (\_ -> Error.defaultOpts) (\h -> h)
+#elif MIN_VERSION_ghc(9, 8, 1)
 mkUnknownDiagnostic :: Error.DiagnosticMessage -> Error.UnknownDiagnostic opts
 mkUnknownDiagnostic = Error.UnknownDiagnostic (\_ -> Error.defaultOpts)
 #else
