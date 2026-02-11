@@ -5,6 +5,16 @@
 {-# OPTIONS_GHC -Wno-incomplete-record-selectors #-}
 #endif
 
+-- |
+-- Copyright: 2026 Greg Pfeil
+-- License: AGPL-3.0-only WITH Universal-FOSS-exception-1.0 OR LicenseRef-commercial
+--
+-- This plugin ensures that all imports include a package-qualifier.
+--
+-- __TODO__: Add support for whitelisting module names. Sometimes the same
+--           module comes from different packages with different dependency
+--           versions, and it’s easier to drop the qualification requirement in
+--           that case than to add CPP.
 module RequirePackageImports
   ( plugin,
 
@@ -17,7 +27,7 @@ where
 import safe "base" Control.Applicative (pure)
 import safe "base" Control.Category ((.))
 import safe "base" Data.Foldable (foldr)
-import safe "base" Data.Function (const, flip, ($))
+import safe "base" Data.Function (flip, ($))
 import safe "base" Data.Functor (fmap)
 import safe "base" Data.Maybe (Maybe (Nothing))
 import safe "base" Data.String (String, fromString)
@@ -30,6 +40,7 @@ import "ghc" GHC.Plugins (Plugin, defaultPlugin)
 import qualified "ghc" GHC.Plugins as Plugins
 import qualified "ghc" GHC.Types.Error as Error
 import qualified "ghc" GHC.Types.SourceText as SourceText
+import qualified "ghc" GHC.Utils.Error
 import qualified "ghc" Language.Haskell.Syntax as Syntax
 import safe qualified "ghc-boot-th" GHC.LanguageExtensions.Type as Extension
 
@@ -37,32 +48,36 @@ mkStringLit :: String -> SourceText.StringLiteral
 mkStringLit =
   flip (SourceText.StringLiteral SourceText.NoSourceText) Nothing . fromString
 
+#if MIN_VERSION_ghc(9, 14, 1)
+mkUnknownDiagnostic ::
+  Error.DiagnosticMessage -> Error.UnknownDiagnostic opts Error.GhcHint
+mkUnknownDiagnostic =
+  Error.UnknownDiagnostic (\_ -> Error.defaultOpts) (\h -> h)
+#elif MIN_VERSION_ghc(9, 8, 1)
+mkUnknownDiagnostic :: Error.DiagnosticMessage -> Error.UnknownDiagnostic opts
+mkUnknownDiagnostic = Error.UnknownDiagnostic (\_ -> Error.defaultOpts)
+#else
+mkUnknownDiagnostic :: Error.DiagnosticMessage -> Error.UnknownDiagnostic
+mkUnknownDiagnostic = Error.UnknownDiagnostic
+#endif
+
 reportNoPkgQual ::
   Syntax.LImportDecl HsExt.GhcPs -> Maybe (Error.MsgEnvelope Errors.GhcMessage)
 reportNoPkgQual imp = case Syntax.ideclPkgQual $ Plugins.unLoc imp of
   Plugins.NoRawPkgQual ->
-    -- FIXME: Why do I need to use this twice?
-    let reason = Error.WarningWithoutFlag
-     in pure
-          Error.MsgEnvelope
-            { Error.errMsgSpan = Annotation.getHasLoc imp,
-              Error.errMsgContext = Plugins.alwaysQualify,
-              Error.errMsgDiagnostic =
-                Errors.GhcUnknownMessage
-                  . Error.UnknownDiagnostic (const Error.defaultOpts)
-                  . Error.mkPlainDiagnostic
-                    reason
-                    [ Error.UnknownHint
-                        (Plugins.unLoc imp)
-                          { Syntax.ideclPkgQual =
-                              Plugins.RawPkgQual $ mkStringLit "<package name>"
-                          }
-                    ]
-                  $ fromString "Missing package-qualified import. (Required due to use of ‘-fplugin RequirePackageImports’)",
-              -- TODO: Make severity configurable.
-              Error.errMsgSeverity = Error.SevError,
-              Error.errMsgReason = Error.ResolvedDiagnosticReason reason
-            }
+    pure
+      . GHC.Utils.Error.mkPlainErrorMsgEnvelope (Annotation.getLocA imp)
+      . Errors.GhcUnknownMessage
+      . mkUnknownDiagnostic
+      . Error.mkPlainDiagnostic
+        Error.WarningWithoutFlag
+        [ Error.UnknownHint
+            (Plugins.unLoc imp)
+              { Syntax.ideclPkgQual =
+                  Plugins.RawPkgQual $ mkStringLit "<package name>"
+              }
+        ]
+      $ fromString "Missing package-qualified import. (Required due to use of ‘-fplugin RequirePackageImports’)"
   Plugins.RawPkgQual _ -> Nothing
 
 processImports ::
@@ -80,11 +95,15 @@ processImports msgs =
   pure . foldr (flip (foldr Error.addMessage) . reportNoPkgQual) msgs
 
 -- | Enables `Extension.PackageImports`, so one can address the plugin’s reports.
+--
+-- @since 0.0.1.0
 dflagsPlugin ::
   [Plugins.CommandLineOption] -> Plugins.DynFlags -> IO Plugins.DynFlags
 dflagsPlugin _ = pure . (`Plugins.xopt_set` Extension.PackageImports)
 
--- | Produce `DIagnostic`s for any imports that are missing package qualifiers.
+-- | Produce `Diagnostic`s for any imports that are missing package qualifiers.
+--
+-- @since 0.0.1.0
 parsedResultAction ::
   [Plugins.CommandLineOption] ->
   Plugins.ModSummary ->
@@ -110,6 +129,10 @@ liftDflagsPlugin dPlugin opts env =
   fmap (\hsc_dflags -> env {Plugins.hsc_dflags}) . dPlugin opts $
     Plugins.hsc_dflags env
 
+-- | The plugin entry point. This is used by passing @-fplugin
+--   RequirePackageImports@ to GHC.
+--
+-- @since 0.0.1.0
 plugin :: Plugin
 plugin =
   defaultPlugin

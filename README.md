@@ -1,4 +1,4 @@
-# require-package-imports
+# `RequirePackageImports`
 
 [![built with garnix](https://img.shields.io/endpoint?url=https%3A%2F%2Fgarnix.io%2Fapi%2Fbadges%2Fsellout%2Frequire-package-imports)](https://garnix.io/repo/sellout/require-package-imports)
 [![GitHub CI](https://github.com/sellout/require-package-imports/actions/workflows/build.yml/badge.svg)](https://github.com/sellout/require-package-imports/actions/workflows/build.yml)
