@@ -1,6 +1,15 @@
-cabal-version: 3.0
--- ^ Cabal 3.0 is the first with the `Universal-FOSS-exception-1.0` SPDX license
---   exception.
+cabal-version: 2.2
+-- ^ If we support GHC before ???, the Cabal file needs to support the version
+--   of Cabal included with GHC. For newer GHC versions, we can generally use
+--   whatever Cabal version we want.
+--
+--   The maximum version to use here is the Cabal included with the oldest
+--   Nixpkgs GHC we support. Currently, that is Cabal 3.8.1.0, with GHC 9.4.8.
+--   I’m not sure why this is – is cabal2nix using the haskell.packages Cabal
+--   instead of the top-level Cabal?
+--
+--   The full set of features added in each version is at
+--   https://cabal.readthedocs.io/en/stable/file-format-changelog.html
 
 name: require-package-imports
 version: 0.0.1.0
@@ -9,9 +18,10 @@ description: A GHC plugin to ensure package-qualified imports are used.
 maintainer: Greg Pfeil <greg@technomadic.org>
 author: Greg Pfeil <greg@technomadic.org>
 copyright: 2026 Greg Pfeil
--- TODO: Remove the redundant `OR AGPL-3.0-only` once
---       haskell/hackage-server#1440 is fixed.
-license: AGPL-3.0-only WITH Universal-FOSS-exception-1.0 OR AGPL-3.0-only OR LicenseRef-commercial
+-- NB: cabal-version < 3.0, doesn’t support `Universal-FOSS-exception-1.0` so we
+--     omit it here, but it’s still included in modules and other license
+--     references.
+license: AGPL-3.0-only OR LicenseRef-commercial
 license-files:
   LICENSE
   LICENSE.AGPL-3.0-only
@@ -24,23 +34,32 @@ extra-doc-files:
   README.md
   docs/*.md
 tested-with:
-  GHC == {
-    7.10.3,
-    8.0.2,
-    8.2.2,
-    8.4.1,
-    8.6.1,
-    8.8.1,
-    8.10.1,
-    9.0.1,
-    9.2.1,
-    9.4.1, 9.4.8,
-    9.6.1, 9.6.7,
-    9.8.1, 9.8.4,
-    9.10.1, 9.10.2, 9.10.3,
-    9.12.1, 9.12.2,
-    9.14.1
-  }
+  -- requires cabal-version <= 1.22
+  -- no `custom-setup`
+  GHC ==7.10.3
+  -- requires cabal-version <= 1.24
+  -- no PVP version operator (`^>=`)
+  || ==8.0.2
+  -- requires cabal-version <= 2.0
+  -- no `common` stanzas
+  -- no SPDX licenses (use `AGPL-3` before this)
+  || ==8.2.2
+  -- requires cabal-version <= 2.2
+  || ==8.4.1
+  -- requires cabal-version <= 2.4
+  -- no `Universal-FOSS-exception-1.0`
+  -- no set-notation for dependencies
+  || ==8.6.1
+  || ==8.8.1
+  || ==8.10.1
+  || ==9.0.1
+  || ==9.2.1
+  || ==9.4.1 || ==9.4.8
+  || ==9.6.1 || ==9.6.7
+  || ==9.8.1 || ==9.8.4
+  || ==9.10.1 || ==9.10.2 || ==9.10.3
+  || ==9.12.1 || ==9.12.2
+  || ==9.14.1
 
 homepage: https://github.com/sellout/require-package-imports#readme
 bug-reports: https://github.com/sellout/require-package-imports/issues
@@ -70,8 +89,8 @@ custom-setup
     --       9.8.3 include an older Cabal, so a newer one may need to be
     --       manually installed.
     Cabal >= 3.10.3 && < 99,
-    base ^>= {4.8.2, 4.9.0, 4.10.0, 4.11.0, 4.12.0, 4.13.0, 4.14.0, 4.15.0, 4.16.0, 4.17.0, 4.18.0, 4.19.0, 4.20.0, 4.21.0, 4.22.0},
-    cabal-doctest ^>= {1.0.0},
+    base ^>=4.8.2 || ^>=4.9.0 || ^>=4.10.0 || ^>=4.11.0 || ^>=4.12.0 || ^>=4.13.0 || ^>=4.14.0 || ^>=4.15.0 || ^>=4.16.0 || ^>=4.17.0 || ^>=4.18.0 || ^>=4.19.0 || ^>=4.20.0 || ^>=4.21.0 || ^>=4.22.0,
+    cabal-doctest ^>=1.0.0,
 
 flag lint
   description:
@@ -148,8 +167,8 @@ common GHC2024
 common defaults
   import: GHC2024
   build-depends:
-    base ^>= {4.8.2, 4.9.0, 4.10.0, 4.11.0, 4.12.0, 4.13.0, 4.14.0, 4.15.0, 4.16.0, 4.17.0, 4.18.0, 4.19.0, 4.20.0, 4.21.0, 4.22.0},
-    ghc-compat-plugin ^>= {0.1.0},
+    base ^>=4.8.2 || ^>=4.9.0 || ^>=4.10.0 || ^>=4.11.0 || ^>=4.12.0 || ^>=4.13.0 || ^>=4.14.0 || ^>=4.15.0 || ^>=4.16.0 || ^>=4.17.0 || ^>=4.18.0 || ^>=4.19.0 || ^>=4.20.0 || ^>=4.21.0 || ^>=4.22.0,
+    ghc-compat-plugin ^>=0.1.0,
   ghc-options:
     -fplugin GhcCompat
     -fplugin-opt GhcCompat:minVersion=7.10.1
@@ -208,7 +227,7 @@ common defaults
       -fplugin NoRecursion
     if impl(ghc >= 9.4.5)
       build-depends:
-        henforcer ^>= {1.0.0},
+        henforcer ^>=1.0.0,
       ghc-options:
         -fplugin Henforcer
   if flag(noisy-deprecations)
