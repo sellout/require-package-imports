@@ -217,13 +217,19 @@ common defaults
 
 library
   import: defaults
-  hs-source-dirs:
-    src
   build-depends:
-    ghc >=7.2.1 && <9.16,
-    ghc-boot-th >=8.0.1 && <9.16,
+    ghc >=7.10.1 && <9.16,
   exposed-modules:
     RequirePackageImports
+  -- Prior to this version, the plugin is a NOP.
+  if impl(ghc >= 9.6.1)
+    hs-source-dirs:
+      supported
+    build-depends:
+      ghc-boot-th >=8.0.1 && <9.16,
+  else
+    hs-source-dirs:
+      unsupported
 
 test-suite doctests
   import: defaults
